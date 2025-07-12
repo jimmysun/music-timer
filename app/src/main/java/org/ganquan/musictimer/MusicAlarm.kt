@@ -10,6 +10,7 @@ import android.os.Environment
 import org.ganquan.musictimer.tools.Broadcast
 import org.ganquan.musictimer.tools.Music
 import org.ganquan.musictimer.tools.Utils
+import org.ganquan.musictimer.tools.Files
 
 class MusicAlarm {
     private var activity: Context
@@ -57,7 +58,7 @@ class StartReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         val folderPath: String = intent.getStringExtra("FOLDER_PATH").toString()
         val name: String = intent.getStringExtra("MUSIC_NAME").toString()
-        val list = Utils.getFileList(folderPath)
+        val list = Files.getList(folderPath)
         Music.playCircle(list, name)
         Broadcast.sendLocal(context, "start worker")
     }
