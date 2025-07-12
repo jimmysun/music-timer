@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit
 
 private const val TAG: String = "timerWorker"
 
-class OneTimeWorker{
+class OneTimeWorker {
     private val activity: Context
     private val startRequestId: UUID = UUID.randomUUID()
     private val endRequestId: UUID = UUID.randomUUID()

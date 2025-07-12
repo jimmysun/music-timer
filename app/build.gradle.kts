@@ -12,14 +12,28 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = 1
-        versionName = "1.0"
+        versionName = "1.1"
 
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+//        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    applicationVariants.all { variant ->
+        variant.outputs.all { output ->
+            // todo: 未生效，待研究
+//            if (output.outputFile?.name?.endsWith(".apk") == true) {
+//                val file = File(output.outputFile.parent + "音乐定时器-v${variant.versionName}.apk")
+//                output.outputFile.renameTo(file)
+//            }
+//            output.outputFile.name = "音乐定时器-v${variant.versionName}.apk"
+
+            return@all true
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -41,16 +55,17 @@ android {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
-    implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+    implementation(libs.androidx.localbroadcastmanager)
+    implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.media)
+    implementation(libs.gson)
+    implementation(libs.material)
+    implementation(libs.okhttp)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
-    implementation ("androidx.localbroadcastmanager:localbroadcastmanager:1.1.0")
-    implementation ("com.google.code.gson:gson:2.11.0")
-    implementation(libs.androidx.work.runtime.ktx)
-    implementation(libs.androidx.media)
 }

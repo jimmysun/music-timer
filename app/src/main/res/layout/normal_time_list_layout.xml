@@ -2,6 +2,7 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:gravity="center_vertical"
     android:orientation="horizontal">
 
     <TextView
@@ -9,14 +10,12 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 
-    <TextView
-        android:id="@+id/normal_time_del"
+    <ImageButton
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="10dp"
-        android:background="?android:attr/selectableItemBackground"
-        android:clickable="true"
-        android:focusable="true"
-        android:text="@string/view_time_btn_del"
-        android:textColor="@color/red" />
+        android:contentDescription="@string/view_time_btn_del"
+        android:src="@drawable/button_delete"
+        android:background="@null"
+        android:id="@+id/normal_time_del"/>
 </LinearLayout>

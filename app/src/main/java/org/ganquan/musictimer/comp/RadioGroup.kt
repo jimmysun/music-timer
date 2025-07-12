@@ -27,7 +27,7 @@ class RadioGroup : LinearLayout {
      */
     // holds the checked id; the selection is empty by default
     var checkedRadioButtonId: Int = -1
-        private set
+        internal set
 
     // tracks children radio buttons checked state
     private var mChildOnCheckedChangeListener: CompoundButton.OnCheckedChangeListener? = null

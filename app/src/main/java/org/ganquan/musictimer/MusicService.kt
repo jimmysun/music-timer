@@ -2,24 +2,23 @@ package org.ganquan.musictimer
 
 import android.annotation.SuppressLint
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
+import androidx.media.app.NotificationCompat
 import org.ganquan.musictimer.tools.Broadcast
-import org.ganquan.musictimer.tools.Utils
+import org.ganquan.musictimer.tools.Files
+import org.ganquan.musictimer.tools.NotificationM
 import java.io.File
 import kotlin.math.floor
 
 // 通知通道与通知 ID
 private const val CHANNEL_ID = "music_play_channel"
-private const val NOTIF_ID  = 1001
+private const val NOTIFICATION_ID  = 1001
 // 通知动作字符串，用于区分点击事件
 private const val ACTION_PLAY  = "ACTION_PLAY"
 private const val ACTION_PAUSE = "ACTION_PAUSE"
@@ -32,7 +31,7 @@ class MusicService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        createNotificationChannel()
+        NotificationM.createChannel(this, CHANNEL_ID, description = "音乐播放通知")
         initMediaPlayer()
     }
 
@@ -58,15 +57,14 @@ class MusicService : Service() {
                 // 首次启动，直接开始播放
                 val folderPath: String = intent.getStringExtra("folder_path").toString()
                 val musicName: String = intent.getStringExtra("music_name").toString()
-                val list = Utils.getFileList(folderPath)
+                val list = Files.getList(folderPath)
                 start(list, musicName)
                 pause()
 //                Broadcast.receiveLocal (this) { msg -> broadcastReceiveHandler(msg)}
             }
         }
 
-        // 每次 onStartCommand 都需要调用 startForeground，保持前台状态
-        startForeground(NOTIF_ID, buildNotification())
+        startForeground(NOTIFICATION_ID, buildNotification())
         // 如果被系统杀掉，不再自动重启
         return START_NOT_STICKY
     }
@@ -148,11 +146,6 @@ class MusicService : Service() {
 
     /** 构建前台服务通知，包含播放/暂停/停止按钮 */
     private fun buildNotification(): Notification {
-        val mainIntent:PendingIntent = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
         val playPauseIntent:Intent = Intent(this, MusicService::class.java)
             .setAction(if(isPlaying) ACTION_PAUSE else ACTION_PLAY)
         val ppPending: PendingIntent = PendingIntent.getService(
@@ -167,30 +160,20 @@ class MusicService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val builder:NotificationCompat.Builder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(currentMusicName)
-//            .setContentText()
-            .setSmallIcon(R.drawable.logo)
-            .setContentIntent(mainIntent) // 点击通知主体
-            .addAction(if(isPlaying) R.mipmap.logo_play else R.mipmap.logo_pause,
-                        if(isPlaying) "暂停" else "播放", ppPending)
-            .addAction(R.mipmap.logo_stop, "停止", stopPending)
-            // 使用 MediaStyle，支持在锁屏及车载展示
-            .setStyle(androidx.media.app.NotificationCompat.MediaStyle()
-                .setShowActionsInCompactView(0, 1))
-
-        return builder.build()
-    }
-
-    /** 创建通知渠道（Android 8.0+） */
-    private fun createNotificationChannel() {
-        val chan = NotificationChannel(
+        return NotificationM.getBuild(this,
             CHANNEL_ID,
-            "音乐播放服务",
-            NotificationManager.IMPORTANCE_LOW
-        )
-        chan.description = "用于在后台播放音乐的前台服务"
-        val mgr:NotificationManager = getSystemService(NotificationManager::class.java)
-        mgr.createNotificationChannel(chan)
+            currentMusicName,
+            actions = listOf(Triple(
+                if(isPlaying) R.drawable.button_play else R.drawable.button_pause,
+                if(isPlaying) "暂停" else "播放",
+                ppPending
+            ), Triple(
+                R.drawable.button_stop,
+                "停止",
+                stopPending
+            )),
+            style = NotificationCompat.MediaStyle()
+                .setShowActionsInCompactView(0, 1)
+        ).build()
     }
 }
