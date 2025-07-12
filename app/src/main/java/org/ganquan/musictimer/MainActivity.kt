@@ -149,9 +149,15 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
+<<<<<<< HEAD
         val normalTimeList1 = Utils.sharedPrefer(this, NormalTimeAdapter.sharedPreferKey)
         if(normalTimeList1 != "" && (normalTimeList1 as MutableList<*>).isNotEmpty())
             normalTimeList = normalTimeList1 as MutableList<MutableList<Int>>
+=======
+        val normalTimeList1: MutableList<MutableList<Int>> =
+            Utils.sharedPrefer(this, NormalTimeAdapter.sharedPreferKey) as MutableList<MutableList<Int>>
+        if(normalTimeList1.isNotEmpty()) normalTimeList = normalTimeList1
+>>>>>>> 101396dc3ccc81115521ba1b19781db4c22eec25
         binding.normalTimeList.layoutManager = GridLayoutManager(this, 2)
         initNormalModeList()
         binding.startTime.setIs24HourView(true)
