@@ -5,7 +5,7 @@
     <string name="view_button_end">结束</string>
     <string name="view_button_permission">申请权限</string>
     <string name="view_button_add">新增</string>
-    <string name="view_music_title">歌曲：</string>
+    <string name="view_music_title">音乐：</string>
     <string name="view_music_default">随机</string>
     <string name="view_time_mode">模式：</string>
     <string name="view_time_btn_add">新增</string>

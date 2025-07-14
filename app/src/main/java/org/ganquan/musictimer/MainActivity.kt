@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
     private var isReadPermission: Boolean = false
     private var isWakeLockPermission: Boolean = false
     private var selectMusicName:String = ""
-    private lateinit var countDownTimer: CountDownTimer
+    private var countDownTimer: CountDownTimer? = null
     private lateinit var binding: ActivityMainBinding
     private lateinit var wakeLock: PowerManager.WakeLock
     private lateinit var folderPath: String
@@ -102,13 +102,13 @@ class MainActivity : AppCompatActivity() {
 
         val startMinuteCount = startTimeHour * 60 + startTimeMunit
         val nowMinuteCount = now.hour * 60 + now.minute
+        val playTime2 = if(nowMinuteCount == startMinuteCount) playTime*60 - now.second else playTime*60
 
-        if (nowMinuteCount > startMinuteCount) {
+        if (nowMinuteCount > startMinuteCount || playTime2 == 0) {
             Toast.makeText(this, getString(R.string.toast_set_time), Toast.LENGTH_SHORT).show()
         } else {
             isStart = true
 
-            val playTime2 = if(nowMinuteCount == startMinuteCount) playTime*60 - now.second else playTime*60
             initCountDown(playTime2)
             binding.startBtn.isEnabled = false
             binding.startBtn.text = "${int2String(startTimeHour)}:${int2String(startTimeMunit)} 开始播放"
@@ -149,16 +149,10 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-<<<<<<< HEAD
         val normalTimeList1 = Utils.sharedPrefer(this, NormalTimeAdapter.sharedPreferKey)
         if(normalTimeList1 != "" && (normalTimeList1 as MutableList<*>).isNotEmpty())
             normalTimeList = normalTimeList1 as MutableList<MutableList<Int>>
-=======
-        val normalTimeList1: MutableList<MutableList<Int>> =
-            Utils.sharedPrefer(this, NormalTimeAdapter.sharedPreferKey) as MutableList<MutableList<Int>>
-        if(normalTimeList1.isNotEmpty()) normalTimeList = normalTimeList1
->>>>>>> 101396dc3ccc81115521ba1b19781db4c22eec25
-        binding.normalTimeList.layoutManager = GridLayoutManager(this, 2)
+        binding.normalTimeList.layoutManager = GridLayoutManager(this, if(normalTimeList.size > 5) 2 else 1)
         initNormalModeList()
         binding.startTime.setIs24HourView(true)
         binding.playTime.minValue = 1
@@ -273,8 +267,9 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onFinish() {}
             }
-        } else if(isStart){
-            countDownTimer.cancel()
+        } else {
+            countDownTimer?.cancel()
+            countDownTimer = null
         }
     }
 
@@ -388,6 +383,8 @@ class MainActivity : AppCompatActivity() {
         if(isExists != null) {
             Toast.makeText(this, getString(R.string.toast_normal_time_exists), Toast.LENGTH_SHORT).show()
         } else {
+            if(normalTimeList.size > 4)
+                (binding.normalTimeList.layoutManager as GridLayoutManager).setSpanCount(2)
             normalTimeList.add(newList)
             initNormalModeList(VISIBLE)
         }
@@ -396,7 +393,7 @@ class MainActivity : AppCompatActivity() {
     private fun handlerPlaying() {
         startForegroundService(initMusicIntent("ACTION_PLAY"))
 
-        countDownTimer.start()
+        countDownTimer?.start()
         binding.startBtn.isEnabled = true
         binding.startBtn.text = getString(R.string.view_button_end)
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)

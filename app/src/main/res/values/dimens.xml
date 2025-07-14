@@ -1,8 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <dimen name="text_size_title">32sp</dimen>
-    <dimen name="text_size_body">30sp</dimen>
-    <dimen name="text_size_second_body">26sp</dimen>
-    <dimen name="text_size_third_body">24sp</dimen>
-    <dimen name="text_size_notes">20sp</dimen>
+    <dimen name="text_size_title">20sp</dimen>
+    <dimen name="text_size_body">18sp</dimen>
+    <dimen name="text_size_second_body">16sp</dimen>
+    <dimen name="text_size_third_body">14sp</dimen>
 </resources>

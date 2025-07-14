@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import org.ganquan.musictimer.tools.Utils
 import org.ganquan.musictimer.tools.Utils.Companion.int2String
@@ -14,7 +15,9 @@ private const val SHARED_PREFER_KEY: String = "normalTimeList"
 
 class NormalTimeAdapter(private val items: MutableList<MutableList<Int>>) : RecyclerView.Adapter<MyViewHolder>() {
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): MyViewHolder {
+    private lateinit var parent: RecyclerView
+    override fun onCreateViewHolder(parent1: ViewGroup, viewType: Int): MyViewHolder {
+        parent = parent1 as RecyclerView
         Utils.sharedPrefer(parent.context, SHARED_PREFER_KEY, items)
         val view = LayoutInflater.from(parent.context).inflate(R.layout.normal_time_list_layout, parent, false)
         return MyViewHolder(view)
@@ -38,13 +41,14 @@ class NormalTimeAdapter(private val items: MutableList<MutableList<Int>>) : Recy
 
             notifyItemRemoved(position)
             notifyItemRangeChanged(position, items.size - position)
+            if(items.size < 6) (parent.layoutManager as GridLayoutManager).setSpanCount(1)
         }
     }
 
     override fun getItemCount(): Int = items.size
 
     companion object {
-        val sharedPreferKey = SHARED_PREFER_KEY
+        const val sharedPreferKey = SHARED_PREFER_KEY
     }
 }
 
