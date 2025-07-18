@@ -9,7 +9,6 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import org.ganquan.musictimer.MainActivity
-import org.ganquan.musictimer.R
 
 class NotificationM {
     companion object {
@@ -47,11 +46,10 @@ class NotificationM {
                     context.packageManager
                         .getApplicationInfo(context.packageName, 0).icon
                 }
+                builder.setSmallIcon(iconId)
             } catch (e: Exception) {
                 e.printStackTrace()
-                iconId = R.drawable.logo
             }
-            builder.setSmallIcon(R.drawable.logo)
 
             if(actions != null && actions.isNotEmpty()) {
                 actions.forEach { it ->
@@ -63,7 +61,8 @@ class NotificationM {
         }
 
         fun createChannel(context: Context,
-                          channelID: String, name: String = "",
+                          channelID: String,
+                          name: String = "",
                           importance: Int = NotificationManager.IMPORTANCE_LOW,
                           description: String = "") {
 
@@ -79,7 +78,6 @@ class NotificationM {
 
         fun getManager(context: Context): NotificationManager {
             return context.getSystemService(NotificationManager::class.java)
-//            return context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         }
     }
 }

@@ -11,17 +11,11 @@ import java.io.File
 
 private const val CHANNEL_ID: String = "apk_down"
 private const val SHARED_PREFER_KEY: String = "updateVersion"
+private const val NOTIFICATION_ID  = 999
 
-class Apk {
-    private var builder: NotificationCompat.Builder
-    private var context: Context
+class Apk(val context: Context) {
+    private var builder: NotificationCompat.Builder = getBuilder()
     private var lastUpdateNoticeTime = 0L
-
-    constructor(context1: Context) {
-        context = context1
-        initChannel()
-        builder = getBuilder()
-    }
 
     @SuppressLint("DefaultLocale")
     fun down(url:String,
@@ -69,6 +63,7 @@ class Apk {
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         try {
             context.startActivity(intent)
+            NotificationM.getManager(context).cancel(NOTIFICATION_ID)
 
 //            val resultPendingIntent = TaskStackBuilder.create(context)
 //                    .addNextIntentWithParentStack(intent)
@@ -79,7 +74,7 @@ class Apk {
 //            builder.setContentIntent(resultPendingIntent)
 //            builder.setAutoCancel(true)
 //            builder.setContentText("点击开始安装")
-//            NotificationM.getManager(context).notify(1, builder.build())
+//            NotificationM.getManager(context).notify(NOTIFICATION_ID, builder.build())
 
             return true
         } catch (e: Exception) {
@@ -89,21 +84,20 @@ class Apk {
     }
 
     private fun getBuilder(text: String = ""): NotificationCompat.Builder {
-        return NotificationM.getBuild(context, CHANNEL_ID, "版本更新", text)    }
-
-    private fun initChannel() {
         NotificationM.createChannel(
             context,
             CHANNEL_ID,
             "更新应用",
             NotificationManager.IMPORTANCE_DEFAULT
         )
+
+        return NotificationM.getBuild(context, CHANNEL_ID, "版本更新", text)
     }
 
     private fun updateNotification(text:String, progressList: List<Int>) {
         builder.setContentText(text)
         if( progressList[1] > 0) builder.setProgress(progressList[0], progressList[1], false)
-        NotificationM.getManager(context).notify(1, builder.build())
+        NotificationM.getManager(context).notify(NOTIFICATION_ID, builder.build())
     }
 
     companion object {

@@ -4,27 +4,29 @@ import android.annotation.SuppressLint
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.media.AudioAttributes
 import android.media.MediaPlayer
 import android.os.IBinder
+import androidx.core.app.NotificationCompat
 import androidx.core.net.toUri
-import androidx.media.app.NotificationCompat
 import org.ganquan.musictimer.tools.Broadcast
 import org.ganquan.musictimer.tools.Files
 import org.ganquan.musictimer.tools.NotificationM
 import java.io.File
 import kotlin.math.floor
 
+
 // 通知通道与通知 ID
 private const val CHANNEL_ID = "music_play_channel"
 private const val NOTIFICATION_ID  = 1001
 // 通知动作字符串，用于区分点击事件
-private const val ACTION_PLAY  = "ACTION_PLAY"
-private const val ACTION_PAUSE = "ACTION_PAUSE"
-private const val ACTION_STOP  = "ACTION_STOP"
+private const val KEY_FOLDER_PATH = "folder_path"
+private const val KEY_MUSIC_NAME = "music_name"
 
 class MusicService : Service() {
+    private var notificationBuilder: NotificationCompat.Builder? = null
     private var mediaPlayer: MediaPlayer = MediaPlayer()
     private var isPlaying = false
     private var currentMusicName = ""
@@ -33,6 +35,7 @@ class MusicService : Service() {
         super.onCreate()
         NotificationM.createChannel(this, CHANNEL_ID, description = "音乐播放通知")
         initMediaPlayer()
+        initNotification()
     }
 
     /**
@@ -40,37 +43,32 @@ class MusicService : Service() {
      */
     @SuppressLint("ForegroundServiceType")
     override fun onStartCommand(intent:Intent?, flags: Int, startId: Int): Int {
-        if(intent != null) {
-            if(intent.action != null) {
-                // 区分点击通知的 Action
-                when (intent.action) {
-                    ACTION_PLAY -> resume()
-                    ACTION_PAUSE -> pause()
-                    ACTION_STOP -> {
-                        stopSelf() // 停止 Service
-                        isPlaying = false
-                        Broadcast.sendLocal(this, "end worker")
-                        return START_NOT_STICKY
-                    }
-                }
-            } else {
-                // 首次启动，直接开始播放
-                val folderPath: String = intent.getStringExtra("folder_path").toString()
-                val musicName: String = intent.getStringExtra("music_name").toString()
+        when (intent?.action) {
+            null -> {
+                val folderPath: String = intent?.getStringExtra("folder_path").toString()
+                val musicName: String = intent?.getStringExtra("music_name").toString()
                 val list = Files.getList(folderPath)
                 start(list, musicName)
                 pause()
-//                Broadcast.receiveLocal (this) { msg -> broadcastReceiveHandler(msg)}
+                startForeground(NOTIFICATION_ID, initNotification())
+            }
+            ACTION_PLAY -> {
+                resume()
+            }
+            ACTION_PAUSE -> pause()
+            ACTION_STOP -> {
+                stopSelf()
+                isPlaying = false
+                Broadcast.sendLocal(this, "end worker")
+                return START_NOT_STICKY
             }
         }
 
-        startForeground(NOTIFICATION_ID, buildNotification())
-        // 如果被系统杀掉，不再自动重启
-        return START_NOT_STICKY
+        return START_STICKY
     }
 
-    override fun onBind(intent: Intent): IBinder {
-        TODO("Return the communication channel to the service.")
+    override fun onBind(intent: Intent): IBinder? {
+        return null
     }
 
     override fun onDestroy() {
@@ -80,7 +78,6 @@ class MusicService : Service() {
         mediaPlayer.stop()
         mediaPlayer.release()
         isPlaying = false
-        // 取消前台状态与通知
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
@@ -145,7 +142,12 @@ class MusicService : Service() {
     }
 
     /** 构建前台服务通知，包含播放/暂停/停止按钮 */
-    private fun buildNotification(): Notification {
+    private fun initNotification(): Notification {
+        if(notificationBuilder != null) {
+            notificationBuilder!!.setContentTitle(currentMusicName)
+            return notificationBuilder!!.build()
+        }
+
         val playPauseIntent:Intent = Intent(this, MusicService::class.java)
             .setAction(if(isPlaying) ACTION_PAUSE else ACTION_PLAY)
         val ppPending: PendingIntent = PendingIntent.getService(
@@ -160,7 +162,7 @@ class MusicService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        return NotificationM.getBuild(this,
+        notificationBuilder = NotificationM.getBuild(this,
             CHANNEL_ID,
             currentMusicName,
             actions = listOf(Triple(
@@ -172,8 +174,40 @@ class MusicService : Service() {
                 "停止",
                 stopPending
             )),
-            style = NotificationCompat.MediaStyle()
+            style = androidx.media.app.NotificationCompat.MediaStyle()
                 .setShowActionsInCompactView(0, 1)
-        ).build()
+        )
+
+        return notificationBuilder!!.build()
+    }
+
+    companion object {
+        const val ACTION_PLAY  = "ACTION_PLAY"
+        const val ACTION_PAUSE = "ACTION_PAUSE"
+        const val ACTION_STOP  = "ACTION_STOP"
+    }
+}
+
+class MusicIntent(context: Context)
+    : Intent(context, MusicService::class.java) {
+
+    override fun setAction(action: String?): MusicIntent {
+        if(action in listOf<String>(MusicService.ACTION_PLAY, MusicService.ACTION_STOP, MusicService.ACTION_PAUSE)) {
+            super.setAction(action)
+        }
+        return this
+    }
+
+    override fun putExtra(name: String?, value: Array<out CharSequence?>?): MusicIntent {
+        if(name in listOf<String>(KEY_FOLDER_PATH, KEY_MUSIC_NAME)) {
+            super.putExtra(name, value)
+        }
+        return this
+    }
+
+    fun setExtra(folderPath: String="", musicName: String=""): MusicIntent {
+        super.putExtra(KEY_FOLDER_PATH, folderPath)
+        super.putExtra(KEY_MUSIC_NAME, musicName)
+        return this
     }
 }

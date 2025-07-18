@@ -1,18 +1,14 @@
 package org.ganquan.musictimer
 
-import android.Manifest.permission.READ_EXTERNAL_STORAGE
-import android.Manifest.permission.READ_MEDIA_AUDIO
-import android.Manifest.permission.WAKE_LOCK
-import android.Manifest.permission.WRITE_EXTERNAL_STORAGE
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.PowerManager
+import android.os.PowerManager.PARTIAL_WAKE_LOCK
 import android.view.View
 import android.view.View.GONE
 import android.view.View.VISIBLE
-import android.view.WindowManager
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
@@ -24,8 +20,9 @@ import org.ganquan.musictimer.tools.Apk
 import org.ganquan.musictimer.tools.Broadcast
 import org.ganquan.musictimer.tools.CoroutineScopeM
 import org.ganquan.musictimer.tools.Files
-import org.ganquan.musictimer.tools.OneTimeWorker
+import org.ganquan.musictimer.tools.OneTimeWorkerIntent
 import org.ganquan.musictimer.tools.Permission
+import org.ganquan.musictimer.tools.PermissionCode
 import org.ganquan.musictimer.tools.Time
 import org.ganquan.musictimer.tools.Utils
 import org.ganquan.musictimer.tools.Utils.Companion.int2String
@@ -33,10 +30,11 @@ import java.io.File
 
 
 class MainActivity : AppCompatActivity() {
-    private val permission = Permission(this)
-    private val oneTimeWorker: OneTimeWorker = OneTimeWorker(this)
-    private var isReadPermission: Boolean = false
-    private var isWakeLockPermission: Boolean = false
+    private var isPermissionRead: Boolean = false
+    private var isPermissionWrite: Boolean = false
+    private var isPermissionIgnoreBattery: Boolean = false
+    private var isPermissionForegroundService: Boolean = false
+    private var isPermissionAccessBackground: Boolean = false
     private var selectMusicName:String = ""
     private var countDownTimer: CountDownTimer? = null
     private lateinit var binding: ActivityMainBinding
@@ -65,15 +63,30 @@ class MainActivity : AppCompatActivity() {
         grantResults: IntArray
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        val type = permission.result(requestCode,grantResults)
-        when (type) {
-            in READ_MEDIA_AUDIO,READ_EXTERNAL_STORAGE -> {
-                isReadPermission = true
-                initMusicList()
+        val permission = Permission(this, requestCode)
+        when (requestCode) {
+            PermissionCode.WRITE_EXTERNAL_STORAGE.data -> {
+                isPermissionWrite = true
+                initMusicPath()
             }
-            WRITE_EXTERNAL_STORAGE -> initMusicPath()
-            WAKE_LOCK -> isWakeLockPermission = true
+            PermissionCode.READ_MEDIA_AUDIO.data -> {
+                if(permission.result(permissions,grantResults,false)) {
+                    isPermissionRead = true
+                    initMusicList()
+                } else {
+                    Toast.makeText(this, getString(R.string.toast_no_music), Toast.LENGTH_LONG).show()
+                    if(!isPermissionRead) binding.startBtn.text = getString(R.string.view_button_permission)
+                }
+            }
+            PermissionCode.FOREGROUND_SERVICE.data -> isPermissionForegroundService = true
+            PermissionCode.ACCESS_BACKGROUND_LOCATION.data -> {
+                isPermissionAccessBackground = true
+                if(!permission.result(permissions,grantResults,false)) {
+                    binding.note.text = getString(R.string.note_permission_access_background)
+                }
+            }
         }
+        initPermission()
     }
 
     override fun onDestroy() {
@@ -114,26 +127,21 @@ class MainActivity : AppCompatActivity() {
             binding.startBtn.text = "${int2String(startTimeHour)}:${int2String(startTimeMunit)} 开始播放"
             val delay = ((startMinuteCount - nowMinuteCount) * 60 - now.second).toLong()
             val playTime1 = (playTime * 60).toLong()
-            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+
+            // 保持cpu活跃
             wakeLock.acquire((delay+playTime1+5)*1000L)
-
-            val intent = initMusicIntent()
-            intent.putExtra("folder_path", folderPath)
-            intent.putExtra("music_name", selectMusicName)
-            startForegroundService(intent)
-
-            oneTimeWorker.request(
-                playTime1,
-                delay
-            )
+            // 开启音乐服务
+            startService(MusicIntent(this).setExtra(folderPath, selectMusicName))
+            // 开户定时服务
+            startService(OneTimeWorkerIntent(this).setExtra(delay,playTime1))
         }
     }
 
     /** 主程：结束 */
     private fun mainEnd() {
-        oneTimeWorker.cancel()
         Broadcast.destroyLocal(this) { msg, info -> initReceiver(msg,info)}
-        stopService(initMusicIntent())
+        stopService(MusicIntent(this) as Intent)
+        stopService(OneTimeWorkerIntent(this) as Intent)
         initMusicName()
         initCountDown()
         binding.startBtn.isEnabled = true
@@ -144,7 +152,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun initView() {
         val powerManager = getSystemService(POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "MyApp::MyWakelockTag")
+        wakeLock = powerManager.newWakeLock(PARTIAL_WAKE_LOCK, "MyApp::MyWakelockTag")
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -180,42 +188,49 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun initPermission() {
-        initMusicPath(true)
-        initMusicList()
-        isWakeLockPermission = permission.check(WAKE_LOCK)
-        if(!isReadPermission) binding.startBtn.text = getString(R.string.view_button_permission)
+        if(!isPermissionWrite) {
+            isPermissionWrite = Permission(this, PermissionCode.WRITE_EXTERNAL_STORAGE.data).check()
+            if (isPermissionWrite) initMusicPath()
+            else return
+        }
+
+        if(!isPermissionRead) {
+            isPermissionRead = Permission(this, PermissionCode.READ_MEDIA_AUDIO.data).check()
+            if(isPermissionRead) initMusicList()
+            else return
+        }
+        //开启白名单
+        if(!isPermissionIgnoreBattery) {
+            Permission(this, PermissionCode.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS.data).check()
+            isPermissionIgnoreBattery = true
+        }
+        if(!isPermissionForegroundService) {
+            isPermissionForegroundService = Permission(this, PermissionCode.FOREGROUND_SERVICE.data).check()
+        }
+        //开启【允许后台活动】
+        if(!isPermissionAccessBackground) {
+            isPermissionAccessBackground = Permission(this, PermissionCode.ACCESS_BACKGROUND_LOCATION.data).check()
+        }
     }
 
     @SuppressLint("SetTextI18n")
-    private fun initMusicPath(isCheck: Boolean = false) {
+    private fun initMusicPath() {
         val name = getString(R.string.view_music_path_name)
         val path = Files.createFolder(Files.getMusicFile(name))
         if(path == "") {
-            if(isCheck) {
-                val isWrite = permission.check(WRITE_EXTERNAL_STORAGE)
-                if (isWrite) initMusicPath()
-            } else {
-                folderPath = Files.getMusicFile().path
-            }
+            folderPath = Files.getMusicFile().path
         } else {
             binding.musicPath.text = "${getString(R.string.view_music_path)}/${name}"
             folderPath = path
         }
     }
 
-    private fun initMusicList() {
-        if(binding.musicList.adapter != null) return
-
-        if(!isReadPermission) {
-            isReadPermission = permission.check(READ_MEDIA_AUDIO)
-            if(!isReadPermission) return
-        }
+    private fun initMusicList(): Boolean {
+        if(binding.musicList.adapter != null) return false
 
         val list:List<File> = Files.getList(folderPath.toString())
         if(!list.isNotEmpty()) {
-            Toast.makeText(this, getString(R.string.toast_no_music), Toast.LENGTH_LONG).show()
-            if(!isReadPermission) binding.startBtn.text = getString(R.string.view_button_permission)
-            return
+            return false
         }
 
         val defaultName = getString(R.string.view_music_default)
@@ -239,6 +254,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.startBtn.text = getString(R.string.view_button_start)
+        return true
     }
 
     private fun initMusicName(name: String = "") {
@@ -247,12 +263,6 @@ class MainActivity : AppCompatActivity() {
             binding.musicName.text = name
             binding.musicName.visibility = if (name == "") GONE else VISIBLE
         }
-    }
-
-    private fun initMusicIntent(action: String = ""): Intent {
-        val intent = Intent(this, MusicService::class.java)
-        if(action != "") intent.action = action
-        return intent
     }
 
     private fun initCountDown(second: Int = 0) {
@@ -391,11 +401,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handlerPlaying() {
-        startForegroundService(initMusicIntent("ACTION_PLAY"))
-
+        startService(MusicIntent(this).setAction(MusicService.ACTION_PLAY))
         countDownTimer?.start()
         binding.startBtn.isEnabled = true
         binding.startBtn.text = getString(R.string.view_button_end)
-        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 }
