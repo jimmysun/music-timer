@@ -7,9 +7,11 @@ import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.PowerManager
 import android.os.PowerManager.PARTIAL_WAKE_LOCK
+import android.provider.Settings.ACTION_SETTINGS
 import android.view.View
 import android.view.View.GONE
 import android.view.View.VISIBLE
+import android.view.WindowManager
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
@@ -136,6 +138,8 @@ class MainActivity : AppCompatActivity() {
             startService(MusicIntent(this).setExtra(folderPath, selectMusicName))
             // 开户定时服务
             startService(OneTimeWorkerIntent(this).setExtra(delay,playTime1))
+            // 保持亮屏
+            window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
     }
 
@@ -380,7 +384,7 @@ class MainActivity : AppCompatActivity() {
 
         binding.noteBtn.setOnClickListener {
             Permission(this, PermissionCode.ACCESS_BACKGROUND_LOCATION.data)
-                .openSetting(ACTION_POWER_USAGE_SUMMARY)
+                .openSetting(if(Permission.isVivoDevice()) ACTION_POWER_USAGE_SUMMARY else ACTION_SETTINGS)
         }
 
         Broadcast.receiveLocal (this) { msg, info -> initReceiver(msg, info) }
@@ -421,5 +425,6 @@ class MainActivity : AppCompatActivity() {
         countDownTimer?.start()
         binding.startBtn.isEnabled = true
         binding.startBtn.text = getString(R.string.view_button_end)
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
     }
 }

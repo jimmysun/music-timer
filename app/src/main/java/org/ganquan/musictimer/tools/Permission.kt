@@ -120,6 +120,22 @@ class Permission(val context: Context, val code: Int) {
             else -> PermissionInfo()
         }
     }
+
+    companion object {
+        fun isHuaweiDevice(): Boolean {
+            val manufacturer = Build.MANUFACTURER
+            val model = Build.MODEL
+            return (manufacturer.equals("HUAWEI", ignoreCase = true)
+                    || model.contains("HUAWEI", ignoreCase = true))
+                    || manufacturer.equals("HONOR", ignoreCase = true)
+                    || model.startsWith("HONOR", ignoreCase = true)
+        }
+
+        fun isVivoDevice(): Boolean {
+            val manufacturer = Build.MANUFACTURER.lowercase()
+            return manufacturer == "vivo" || manufacturer == "bbk"
+        }
+    }
 }
 
 data class PermissionInfo(val type: String="", val toastMsg: String="")
