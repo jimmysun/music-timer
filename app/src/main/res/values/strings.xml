@@ -21,10 +21,11 @@
     <string name="view_music_path_name">音乐定时器</string>
     <string name="view_mode_normal">常规</string>
     <string name="view_mode_custom">自定义</string>
+    <string name="view_note_btn">去设置</string>
     <string name="toast_set_time">开始时间须大于当前时间</string>
     <string name="toast_no_music">请添加音乐到音乐目录</string>
     <string name="toast_normal_time_exists">开始时间不能重叠</string>
     <string name="toast_normal_time_limit">最多添加10条</string>
     <string name="toast_version_update">请更新版本：</string>
-    <string name="note_permission_access_background">若熄屏后仍无法按时播放，\n请开启允许后台活动等权限</string>
+    <string name="note_permission_access_background">若熄屏无法按时播放，请开启后台权限\n否则请保持亮屏</string>
 </resources>

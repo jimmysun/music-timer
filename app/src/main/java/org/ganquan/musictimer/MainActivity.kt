@@ -2,6 +2,7 @@ package org.ganquan.musictimer
 
 import android.annotation.SuppressLint
 import android.content.Intent
+import android.content.Intent.ACTION_POWER_USAGE_SUMMARY
 import android.os.Bundle
 import android.os.CountDownTimer
 import android.os.PowerManager
@@ -40,9 +41,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var wakeLock: PowerManager.WakeLock
     private lateinit var folderPath: String
-    private var customPlayTime = 10
-    private var normalTimeList: MutableList<MutableList<Int>> =
-        mutableListOf(mutableListOf(9,20,10,GONE), mutableListOf(19,20,10,GONE))
+    private var customPlayTime = NormalTimeAdapter.PLAY_TIME_INIT
+    private var normalTimeList: MutableList<NormalTimeInfo> = mutableListOf(
+        NormalTimeInfo(9,20,NormalTimeAdapter.PLAY_TIME_INIT),
+        NormalTimeInfo(19,20,NormalTimeAdapter.PLAY_TIME_INIT))
     private var startTimeHour: Int = 0
     private var startTimeMunit: Int = 0
     private var playTime: Int = 0
@@ -70,7 +72,7 @@ class MainActivity : AppCompatActivity() {
                 initMusicPath()
             }
             PermissionCode.READ_MEDIA_AUDIO.data -> {
-                if(permission.result(permissions,grantResults,false)) {
+                if(permission.result(permissions,grantResults)) {
                     isPermissionRead = true
                     initMusicList()
                 } else {
@@ -81,8 +83,8 @@ class MainActivity : AppCompatActivity() {
             PermissionCode.FOREGROUND_SERVICE.data -> isPermissionForegroundService = true
             PermissionCode.ACCESS_BACKGROUND_LOCATION.data -> {
                 isPermissionAccessBackground = true
-                if(!permission.result(permissions,grantResults,false)) {
-                    binding.note.text = getString(R.string.note_permission_access_background)
+                if(!permission.result(permissions,grantResults)) {
+                    binding.note.visibility = VISIBLE
                 }
             }
         }
@@ -101,10 +103,10 @@ class MainActivity : AppCompatActivity() {
         val now = Time.get()
         when (binding.mode.checkedRadioButtonId) {
             R.id.mode_normal -> {
-                val list: List<Int>? = normalTimeList.find {it -> !Time.isPass(it[0],it[1])}
-                startTimeHour = (list?.get(0)) ?: -1
-                startTimeMunit = (list?.get(1)) ?: 0
-                playTime = (list?.get(2)) ?: 0
+                val info: NormalTimeInfo? = normalTimeList.find { it -> !Time.isPass(it.hour,it.minute)}
+                startTimeHour = (info?.hour) ?: -1
+                startTimeMunit = (info?.minute) ?: 0
+                playTime = (info?.time) ?: 0
             }
             R.id.mode_custom -> {
                 startTimeHour = binding.startTime.hour
@@ -152,15 +154,23 @@ class MainActivity : AppCompatActivity() {
 
     private fun initView() {
         val powerManager = getSystemService(POWER_SERVICE) as PowerManager
-        wakeLock = powerManager.newWakeLock(PARTIAL_WAKE_LOCK, "MyApp::MyWakelockTag")
+        wakeLock = powerManager.newWakeLock(PARTIAL_WAKE_LOCK, "$packageName::wakeLockTag")
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val normalTimeList1 = Utils.sharedPrefer(this, NormalTimeAdapter.sharedPreferKey)
-        if(normalTimeList1 != "" && (normalTimeList1 as MutableList<*>).isNotEmpty())
-            normalTimeList = normalTimeList1 as MutableList<MutableList<Int>>
-        binding.normalTimeList.layoutManager = GridLayoutManager(this, if(normalTimeList.size > 5) 2 else 1)
+        try {
+            val normalTimeList1 = Utils.sharedPrefer(this, NormalTimeAdapter.SHARED_PREFER_KEY) as MutableList<*>
+            if(normalTimeList1.isNotEmpty() && normalTimeList1[0] != "" && normalTimeList1[0] !is List<*>) {
+                normalTimeList = normalTimeList1.map {
+                    NormalTimeAdapter.toNormalTimeInfo(it as LinkedHashMap<String,Double>)
+                } as MutableList<NormalTimeInfo>
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        binding.normalTimeList.layoutManager =
+            GridLayoutManager(this, if(normalTimeList.size > NormalTimeAdapter.LINE_LIMIT) 2 else 1)
         initNormalModeList()
         binding.startTime.setIs24HourView(true)
         binding.playTime.minValue = 1
@@ -285,7 +295,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun initNormalMode(isEdit: Boolean = false) {
         if(isEdit) {
-            initTimeView(10)
+            initTimeView(NormalTimeAdapter.PLAY_TIME_INIT)
             binding.modeCustomDetail.visibility = VISIBLE
             binding.normalTimeEdit.text = getString(R.string.view_time_btn_done)
             binding.startBtn.text = getString(R.string.view_button_add)
@@ -315,8 +325,8 @@ class MainActivity : AppCompatActivity() {
 
     @SuppressLint("NotifyDataSetChanged")
     private fun initNormalModeList(isDeleteVisibility: Int = GONE) {
-        normalTimeList.forEach { it -> it[3] = isDeleteVisibility}
-        normalTimeList.sortWith(compareBy<List<Int>> { it[0] }.thenBy { it[1] })
+        normalTimeList.forEach { it -> it.delBtnVisibility = isDeleteVisibility}
+        normalTimeList.sortWith(compareBy<NormalTimeInfo> { it.hour }.thenBy { it.minute })
         binding.normalTimeList.adapter = NormalTimeAdapter(normalTimeList)
         binding.normalTimeList.adapter?.notifyDataSetChanged()
     }
@@ -328,6 +338,7 @@ class MainActivity : AppCompatActivity() {
         binding.playTime.value = pTime or customPlayTime
     }
 
+    @SuppressLint("BatteryLife")
     private fun initListener() {
         binding.startBtn.setOnClickListener {
             when (binding.startBtn.text.split(" ").last()) {
@@ -367,6 +378,11 @@ class MainActivity : AppCompatActivity() {
             }
         })
 
+        binding.noteBtn.setOnClickListener {
+            Permission(this, PermissionCode.ACCESS_BACKGROUND_LOCATION.data)
+                .openSetting(ACTION_POWER_USAGE_SUMMARY)
+        }
+
         Broadcast.receiveLocal (this) { msg, info -> initReceiver(msg, info) }
     }
 
@@ -379,23 +395,23 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handleAddNormalTime() {
-        if(normalTimeList.size >= 10) {
+        if(normalTimeList.size >= NormalTimeAdapter.ITEM_TOTAL) {
             Toast.makeText(this, getString(R.string.toast_normal_time_limit), Toast.LENGTH_SHORT).show()
             return
         }
-        val newList = mutableListOf<Int>(
+        val newInfo = NormalTimeInfo(
             binding.startTime.hour,
             binding.startTime.minute,
             binding.playTime.value,
             VISIBLE
         )
-        val isExists = normalTimeList.find { it[0] == newList[0] && it[1] == newList[1] }
+        val isExists = normalTimeList.find { it.hour == newInfo.hour && it.minute == newInfo.hour }
         if(isExists != null) {
             Toast.makeText(this, getString(R.string.toast_normal_time_exists), Toast.LENGTH_SHORT).show()
         } else {
-            if(normalTimeList.size > 4)
+            if(normalTimeList.size >= NormalTimeAdapter.LINE_LIMIT)
                 (binding.normalTimeList.layoutManager as GridLayoutManager).setSpanCount(2)
-            normalTimeList.add(newList)
+            normalTimeList.add(newInfo)
             initNormalModeList(VISIBLE)
         }
     }

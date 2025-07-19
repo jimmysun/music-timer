@@ -3,17 +3,17 @@ package org.ganquan.musictimer
 import android.annotation.SuppressLint
 import android.view.LayoutInflater
 import android.view.View
+import android.view.View.GONE
 import android.view.ViewGroup
 import android.widget.ImageButton
 import android.widget.TextView
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import org.ganquan.musictimer.tools.Time
 import org.ganquan.musictimer.tools.Utils
 import org.ganquan.musictimer.tools.Utils.Companion.int2String
 
-private const val SHARED_PREFER_KEY: String = "normalTimeList"
-
-class NormalTimeAdapter(private val items: MutableList<MutableList<Int>>) : RecyclerView.Adapter<MyViewHolder>() {
+class NormalTimeAdapter(private val items: MutableList<NormalTimeInfo>) : RecyclerView.Adapter<MyViewHolder>() {
 
     private lateinit var parent: RecyclerView
     override fun onCreateViewHolder(parent1: ViewGroup, viewType: Int): MyViewHolder {
@@ -25,30 +25,43 @@ class NormalTimeAdapter(private val items: MutableList<MutableList<Int>>) : Recy
 
     @SuppressLint("SetTextI18n")
     override fun onBindViewHolder(holder: MyViewHolder, position: Int) {
-        var startH: Int = items[position][0]
-        var startM: Int = items[position][1]
+        var startH: Int = items[position].hour
+        var startM: Int = items[position].minute
         var endH: Int = startH
-        var endM: Int = startM+items[position][2]
+        var endM: Int = startM+items[position].time
         if(endM > 60) {
             endH += 1
             endM -= 60
         }
         holder.normalTime.text = "${int2String(startH)}:${int2String(startM)} - ${int2String(startH)}:${int2String(endM)}"
 
-        holder.deleteButton.visibility = items[position][3]
+        holder.deleteButton.visibility = items[position].delBtnVisibility
         holder.deleteButton.setOnClickListener {
             items.removeAt(position)
 
             notifyItemRemoved(position)
             notifyItemRangeChanged(position, items.size - position)
-            if(items.size < 6) (parent.layoutManager as GridLayoutManager).setSpanCount(1)
+            if(items.size <= LINE_LIMIT)
+                    (parent.layoutManager as GridLayoutManager).setSpanCount(1)
         }
     }
 
     override fun getItemCount(): Int = items.size
 
     companion object {
-        const val sharedPreferKey = SHARED_PREFER_KEY
+        const val SHARED_PREFER_KEY = "normalTimeList"
+        const val PLAY_TIME_INIT = 10
+        const val ITEM_TOTAL = 10
+        const val LINE_LIMIT = 5
+
+        fun toNormalTimeInfo(value: LinkedHashMap<String, Double>?): NormalTimeInfo {
+            return NormalTimeInfo(
+                value?.get("hour")?.toInt() ?: Time.get().hour,
+                value?.get("minute")?.toInt() ?: Time.get().minute,
+                value?.get("time")?.toInt() ?: PLAY_TIME_INIT,
+                value?.get("delBtnVisibility")?.toInt() ?: GONE
+            )
+        }
     }
 }
 
@@ -56,3 +69,10 @@ class MyViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
     val deleteButton: ImageButton = itemView.findViewById(R.id.normal_time_del)
     val normalTime: TextView = itemView.findViewById(R.id.normal_time)
 }
+
+data class NormalTimeInfo(
+    var hour: Int,
+    var minute: Int,
+    var time: Int,
+    var delBtnVisibility: Int = GONE
+)

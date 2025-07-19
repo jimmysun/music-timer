@@ -57,7 +57,7 @@ class Permission(val context: Context, val code: Int) {
     fun result(
         permissions: Array<String?>,
         grantResults: IntArray,
-        isAlertDialog: Boolean = true
+        alertDialogAction: String? = null
     ): Boolean {
         if (grantResults.isEmpty()) return false
         if (permissions.size == 1
@@ -66,11 +66,11 @@ class Permission(val context: Context, val code: Int) {
         } else if (permissions.size > 1
             && (grantResults.copyOfRange(0, 2).contains(PackageManager.PERMISSION_GRANTED))) {
             return true
-        } else if(isAlertDialog){
+        } else if(alertDialogAction != null){
             AlertDialog.Builder(context)
                 .setMessage(permissionInfo.toastMsg)
                 .setPositiveButton("去设置") { _, _ ->
-                    openSetting()
+                    openSetting(alertDialogAction)
                 }
                 .setNegativeButton("取消", null)
                 .show()
@@ -78,10 +78,12 @@ class Permission(val context: Context, val code: Int) {
         return false
     }
 
-    fun openSetting(action: String = ACTION_APPLICATION_DETAILS_SETTINGS) {
+    fun openSetting(action: String = "") {
         try {
-            val intent = Intent(action)
-            intent.setData(("package:${context.packageName}").toUri())
+            var action1 = if(action == "") ACTION_APPLICATION_DETAILS_SETTINGS else action
+            val intent = Intent(action1)
+            if(action1 == ACTION_APPLICATION_DETAILS_SETTINGS)
+                intent.setData(("package:${context.packageName}").toUri())
             context.startActivity(intent)
         } catch (e: Exception) {
             e.printStackTrace()

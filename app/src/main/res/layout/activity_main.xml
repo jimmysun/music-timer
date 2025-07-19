@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -13,7 +14,7 @@
         tools:ignore="MissingConstraints">
 
         <ImageView
-            android:layout_width="match_parent"
+            android:layout_width="wrap_content"
             android:layout_height="200dp"
             android:contentDescription="@string/app_name"
             android:src="@drawable/index"/>
@@ -22,6 +23,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
             <TextView
@@ -44,6 +46,7 @@
         android:layout_marginLeft="8dp"
         android:layout_marginRight="8dp"
         android:layout_marginTop="220dp"
+        android:layout_marginBottom="50dp"
         android:orientation="vertical">
 
         <LinearLayout
@@ -121,12 +124,18 @@
                             tools:ignore="ChildInNonViewGroup" />
                     </LinearLayout>
 
-                    <androidx.recyclerview.widget.RecyclerView
+                    <androidx.constraintlayout.widget.ConstraintLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="5dp"
-                        android:orientation="vertical"
-                        android:id="@+id/normal_time_list"/>
+                        android:layout_marginBottom="5dp">
+                        <androidx.recyclerview.widget.RecyclerView
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            app:layout_constraintHeight_default="wrap"
+                            app:layout_constraintHeight_max="125dp"
+                            android:scrollbars="vertical"
+                            android:id="@+id/normal_time_list"/>
+                    </androidx.constraintlayout.widget.ConstraintLayout>
 
                     <LinearLayout
                         android:layout_width="match_parent"
@@ -205,13 +214,43 @@
         </LinearLayout>
     </LinearLayout>
 
-    <TextView
+    <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:gravity="bottom"
-        android:textAlignment="center"
-        android:textSize="@dimen/text_size_second_body"
+        android:visibility="visible"
+        android:paddingBottom="10dp"
         android:id="@+id/note"
-        tools:ignore="RtlCompat" />
+        tools:ignore="MissingConstraints">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:layout_centerHorizontal="true"
+            android:layout_alignParentBottom="true"
+            tools:ignore="UselessParent">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textAlignment="center"
+            android:textSize="@dimen/text_size_third_body"
+            android:text="@string/note_permission_access_background"
+            android:id="@+id/note_text"
+            tools:ignore="RtlCompat" />
+
+        <Button
+            android:layout_width="60dp"
+            android:layout_height="40dp"
+            android:layout_marginStart="5dp"
+            android:paddingStart="5dp"
+            android:paddingEnd="5dp"
+            android:text="@string/view_note_btn"
+            android:backgroundTint="@color/grey"
+            android:textColor="@color/black"
+            android:textSize="@dimen/text_size_third_body"
+            android:id="@+id/note_btn"/>
+        </LinearLayout>
+    </RelativeLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

@@ -35,7 +35,7 @@ class Json {
                 is Char -> JSONObject().put("Char", params)
                 is String -> JSONObject().put("String", params)
                 null -> JSONObject().put("Null", "")
-                else -> ""
+                else -> JSONObject().put("Json", toGJson(params))
             }.toString()
         }
 
@@ -59,6 +59,7 @@ class Json {
                     "Long" -> obj.getLong(key)
                     "String" -> obj.getString(key)
                     "Char" -> obj.getString(key)[0]
+                    "Json" -> parseGJson(obj.getString(key))
                     "Null" -> null
                     else -> {
                         map.put(key, parseJson(obj.getString(key)))
