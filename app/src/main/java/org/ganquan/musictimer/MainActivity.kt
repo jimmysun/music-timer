@@ -145,6 +145,7 @@ class MainActivity : AppCompatActivity() {
 
     /** 主程：结束 */
     private fun mainEnd() {
+        window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         Broadcast.destroyLocal(this) { msg, info -> initReceiver(msg,info)}
         stopService(MusicIntent(this) as Intent)
         stopService(OneTimeWorkerIntent(this) as Intent)
