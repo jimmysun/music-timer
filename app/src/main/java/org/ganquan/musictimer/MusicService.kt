@@ -97,7 +97,7 @@ class MusicService : Service() {
     /** 开始播放并更新状态 */
     private fun start(fileList: List<File>, name: String = "") {
         try {
-            var file: File? = fileList.find { it.name == name }
+            var file: File? = fileList.find { it.nameWithoutExtension == name }
             if (file == null) file = fileList[floor(Math.random() * fileList.size).toInt()]
             currentMusicName = file.nameWithoutExtension
             Broadcast.sendLocal(this, "new music", currentMusicName)
